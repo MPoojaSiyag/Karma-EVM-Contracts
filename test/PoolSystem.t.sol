@@ -204,4 +204,18 @@ contract PoolSystemTest is Test {
         vm.expectRevert(Coin.OnlyPredictionPool.selector);
         bull.transferReserveToOther(1);
     }
+
+    function test_rebalanceEmitsAccurateReserves() public {
+        initialOracle.setValue(2e18);
+        uint256 bullBefore = baseToken.balanceOf(address(bull));
+        uint256 bearBefore = baseToken.balanceOf(address(bear));
+
+        pool.rebalance();
+
+        uint256 bullAfter = baseToken.balanceOf(address(bull));
+        uint256 bearAfter = baseToken.balanceOf(address(bear));
+        assertGt(bullAfter, bullBefore);
+        assertLt(bearAfter, bearBefore);
+        assertEq(bullAfter + bearAfter, bullBefore + bearBefore);
+    }
 }

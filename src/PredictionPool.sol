@@ -226,6 +226,12 @@ contract PredictionPool is Ownable2Step {
             newPrice > oldPrice ? newPrice - oldPrice : oldPrice - newPrice, 10_000, oldPrice
         );
         previousPrice = newPrice;
+
+        uint256 bullReservesAfter =
+            toBull ? bullBefore + transferAmount : bullBefore - transferAmount;
+        uint256 bearReservesAfter =
+            toBull ? bearBefore - transferAmount : bearBefore + transferAmount;
+
         emit Rebalanced(
             msg.sender,
             block.number,
@@ -234,8 +240,8 @@ contract PredictionPool is Ownable2Step {
             percentChange,
             bullBefore,
             bearBefore,
-            baseToken.balanceOf(address(bullCoin)),
-            baseToken.balanceOf(address(bearCoin)),
+            bullReservesAfter,
+            bearReservesAfter,
             transferAmount,
             toBull,
             block.timestamp

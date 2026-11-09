@@ -204,4 +204,45 @@ contract PoolSystemTest is Test {
         vm.expectRevert(Coin.OnlyPredictionPool.selector);
         bull.transferReserveToOther(1);
     }
+
+    function test_buyEmitsAccurateReservesAndSupply() public {
+        uint256 amountIn = 100e18;
+        baseToken.mint(trader, amountIn);
+
+        uint256 bullReserveBefore = baseToken.balanceOf(address(bull));
+        uint256 bullSupplyBefore = bull.totalSupply();
+
+        vm.startPrank(trader);
+        baseToken.approve(address(bull), amountIn);
+        uint256 coinOut = bull.buy(trader, amountIn);
+        vm.stopPrank();
+
+        uint256 bullReserveAfter = baseToken.balanceOf(address(bull));
+        uint256 bullSupplyAfter = bull.totalSupply();
+
+        assertEq(bullSupplyAfter, bullSupplyBefore + coinOut);
+        assertGt(bullReserveAfter, bullReserveBefore);
+    }
+
+    function test_sellEmitsAccurateReservesAndSupply() public {
+        uint256 amountIn = 100e18;
+        baseToken.mint(trader, amountIn);
+
+        vm.startPrank(trader);
+        baseToken.approve(address(bull), amountIn);
+        uint256 coinOut = bull.buy(trader, amountIn);
+
+        uint256 bullReserveBeforeSell = baseToken.balanceOf(address(bull));
+        uint256 bullSupplyBeforeSell = bull.totalSupply();
+
+        uint256 burnAmount = coinOut / 2;
+        bull.sell(burnAmount);
+        vm.stopPrank();
+
+        uint256 bullReserveAfterSell = baseToken.balanceOf(address(bull));
+        uint256 bullSupplyAfterSell = bull.totalSupply();
+
+        assertEq(bullSupplyAfterSell, bullSupplyBeforeSell - burnAmount);
+        assertLt(bullReserveAfterSell, bullReserveBeforeSell);
+    }
 }

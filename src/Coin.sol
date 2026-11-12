@@ -198,7 +198,7 @@ contract Coin is ERC20, ReentrancyGuard {
             amountCoin,
             price,
             currentSupply + amountCoin,
-            reserveBefore + amountAfterFees,
+            asset.balanceOf(address(this)),
             totalFees
         );
         emit FeeDistribution(

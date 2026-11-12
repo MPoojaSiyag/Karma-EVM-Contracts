@@ -13,7 +13,7 @@ import { PredictionPoolFactory } from "../src/PredictionPoolFactory.sol";
 import { ChainlinkOracle } from "../src/oracles/ChainlinkOracle.sol";
 import { IAggregatorV3 } from "../src/interfaces/IAggregatorV3.sol";
 import { IOracle } from "../src/interfaces/IOracle.sol";
-import { MockBaseToken } from "./mocks/Mocks.sol";
+import { MockBaseToken, MockFeeOnTransferToken } from "./mocks/Mocks.sol";
 
 contract MockFeed is IAggregatorV3 {
     uint8 public immutable override decimals;
@@ -299,5 +299,27 @@ contract PoolSystemTest is Test {
         assertEq(baseToken.balanceOf(address(bull)), bullBefore);
         assertEq(baseToken.balanceOf(address(bear)), bearBefore);
         assertEq(pool.previousPrice(), 1e18);
+    }
+
+    function test_createPool_revertsOnFeeOnTransferToken() public {
+        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
+        fotToken.mint(address(this), INITIAL_DEPOSIT);
+        fotToken.approve(address(poolFactory), type(uint256).max);
+
+        vm.expectRevert(PredictionPoolFactory.FeeOnTransferNotSupported.selector);
+        poolFactory.createPool(
+            "FOT pool",
+            address(fotToken),
+            address(initialOracle),
+            "Bull",
+            "BULL",
+            "Bear",
+            "BEAR",
+            MINT_FEE,
+            BURN_FEE,
+            CREATOR_FEE,
+            DEV_FEE,
+            INITIAL_DEPOSIT
+        );
     }
 }

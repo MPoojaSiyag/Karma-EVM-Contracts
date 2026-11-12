@@ -13,6 +13,21 @@ contract MockBaseToken is ERC20 {
     }
 }
 
+// MockFeeOnTransferToken — Simulates fee-on-transfer token charging 1% fee on transferFrom
+contract MockFeeOnTransferToken is ERC20 {
+    constructor() ERC20("Mock FOT", "FOT") { }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        uint256 fee = amount / 100;
+        _burn(from, fee);
+        return super.transferFrom(from, to, amount - fee);
+    }
+}
+
 // MockCoin — Simulates Coin with priceSell() and reserve tracking.
 // The "reserve" is simply the baseToken balance held by this contract.
 contract MockCoin is ERC20 {

@@ -254,4 +254,50 @@ contract PoolSystemTest is Test {
         assertEq(bullAfter, 800e18);
         assertEq(bearAfter, 200e18);
     }
+
+    function test_rebalanceEmitsAccurateReserves_transferToBear() public {
+        initialOracle.setValue(5e17);
+        uint256 bullBefore = baseToken.balanceOf(address(bull));
+        uint256 bearBefore = baseToken.balanceOf(address(bear));
+
+        uint256 expectedTransfer = 300e18;
+        uint256 expectedBullAfter = bullBefore - expectedTransfer;
+        uint256 expectedBearAfter = bearBefore + expectedTransfer;
+
+        vm.expectEmit(true, true, false, true, address(pool));
+        emit Rebalanced(
+            address(this),
+            block.number,
+            1e18,
+            5e17,
+            5_000,
+            bullBefore,
+            bearBefore,
+            expectedBullAfter,
+            expectedBearAfter,
+            expectedTransfer,
+            false,
+            block.timestamp
+        );
+
+        pool.rebalance();
+
+        uint256 bullAfter = baseToken.balanceOf(address(bull));
+        uint256 bearAfter = baseToken.balanceOf(address(bear));
+        assertEq(bullAfter, expectedBullAfter);
+        assertEq(bearAfter, expectedBearAfter);
+        assertEq(bullAfter, 200e18);
+        assertEq(bearAfter, 800e18);
+    }
+
+    function test_rebalance_zeroTransferWhenPriceUnchanged() public {
+        uint256 bullBefore = baseToken.balanceOf(address(bull));
+        uint256 bearBefore = baseToken.balanceOf(address(bear));
+
+        pool.rebalance();
+
+        assertEq(baseToken.balanceOf(address(bull)), bullBefore);
+        assertEq(baseToken.balanceOf(address(bear)), bearBefore);
+        assertEq(pool.previousPrice(), 1e18);
+    }
 }

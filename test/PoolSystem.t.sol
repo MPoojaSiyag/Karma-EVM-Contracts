@@ -301,15 +301,10 @@ contract PoolSystemTest is Test {
         assertEq(pool.previousPrice(), 1e18);
     }
 
-    function test_createPool_revertsOnFeeOnTransferToken() public {
-        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
-        fotToken.mint(address(this), INITIAL_DEPOSIT);
-        fotToken.approve(address(poolFactory), type(uint256).max);
-
-        vm.expectRevert(PredictionPoolFactory.FeeOnTransferNotSupported.selector);
+    function _createPoolWithToken(address token) private {
         poolFactory.createPool(
             "FOT pool",
-            address(fotToken),
+            token,
             address(initialOracle),
             "Bull",
             "BULL",
@@ -321,5 +316,55 @@ contract PoolSystemTest is Test {
             DEV_FEE,
             INITIAL_DEPOSIT
         );
+    }
+
+    function test_createPool_revertsOnFeeOnTransferToken() public {
+        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
+        fotToken.mint(address(this), INITIAL_DEPOSIT);
+        fotToken.approve(address(poolFactory), type(uint256).max);
+
+        vm.expectRevert(PredictionPoolFactory.FeeOnTransferNotSupported.selector);
+        _createPoolWithToken(address(fotToken));
+    }
+
+    function test_createPool_revertsOnFeeOnTransferToken_poolDepositCheck() public {
+        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
+        fotToken.mint(address(this), INITIAL_DEPOSIT);
+        fotToken.approve(address(poolFactory), type(uint256).max);
+
+        // Exempt factory transferFrom so factory check passes;
+        // Pool's safeTransferFrom in initialize is taxed and triggers line 172 check.
+        fotToken.setExemptRecipient(address(poolFactory));
+
+        vm.expectRevert(PredictionPool.FeeOnTransferNotSupported.selector);
+        _createPoolWithToken(address(fotToken));
+    }
+
+    function test_createPool_revertsOnFeeOnTransferToken_bullDepositCheck() public {
+        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
+        fotToken.mint(address(this), INITIAL_DEPOSIT);
+        fotToken.approve(address(poolFactory), type(uint256).max);
+
+        // Disable transferFrom fee so factory pull and pool pull both succeed;
+        // Tax 1st transfer (pool -> bullCoin deposit) to trigger line 177 check.
+        fotToken.setFeeOnTransferFrom(false);
+        fotToken.setTaxOnlyTransferIndex(1);
+
+        vm.expectRevert(PredictionPool.FeeOnTransferNotSupported.selector);
+        _createPoolWithToken(address(fotToken));
+    }
+
+    function test_createPool_revertsOnFeeOnTransferToken_bearDepositCheck() public {
+        MockFeeOnTransferToken fotToken = new MockFeeOnTransferToken();
+        fotToken.mint(address(this), INITIAL_DEPOSIT);
+        fotToken.approve(address(poolFactory), type(uint256).max);
+
+        // Disable transferFrom fee so factory pull and pool pull both succeed;
+        // Tax 2nd transfer (pool -> bearCoin deposit) to trigger line 182 check.
+        fotToken.setFeeOnTransferFrom(false);
+        fotToken.setTaxOnlyTransferIndex(2);
+
+        vm.expectRevert(PredictionPool.FeeOnTransferNotSupported.selector);
+        _createPoolWithToken(address(fotToken));
     }
 }
